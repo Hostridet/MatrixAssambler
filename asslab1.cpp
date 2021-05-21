@@ -6,7 +6,7 @@
 using namespace std;
 unsigned long int rdtsc_zn;
 
-
+//получение количества тактов
 unsigned __int64 rdtsc(void)
 {
 	return __rdtsc();
@@ -17,7 +17,7 @@ void FullTheMatrix(unsigned short int M[8][8])
 	{
 		for (int k = 0; k < 8; k++)
 		{
-			M[i][k] = (i + 1) + (k + 5);
+			M[i][k] = (i + 1) + (k + 5) + rand() % 40;
 		}
 	}
 }
@@ -39,6 +39,8 @@ int main()
 {
 	unsigned short int M1[8][8];
 	unsigned short int M2[8][8];
+	unsigned short int var1, var2;
+	unsigned int temp;
 
 	unsigned __int64 TimeValue2 = 0;
 	cout << "With SSE: " << endl << "____________" << endl;
@@ -151,8 +153,92 @@ int main()
 
 	cout << endl;
 	// высчитываем время через число тактов за время выполнения программы и мощность процессора
-	rdtsc_zn = (rdtsc() - TimeValue2) / (1000000 * 1000 * 2.3) * 1000; 
+	rdtsc_zn = (rdtsc() - TimeValue2) / (1000000 * 1000 * 2.3) * 10000; 
 	// высчитываем время через число тактов за время выполнения программы и мощность процессора
 	cout << "Time (in milliseconds) (with SSE) = " << rdtsc_zn << endl; // выводим время выполнения программы
+
+	cout << "Without SSE: " << endl << "____________" << endl;
+	unsigned __int64 TimeValue = 0;
+	TimeValue = rdtsc();
+
+
+
+	FullTheMatrix(M1);
+	FullTheMatrix(M2);
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+			ResultMatrix[i][j] = 0; // чистим итоговую матрицу заранее
+		}
+	}
+
+	cout << "x = " << x << endl; // выводим заданное x
+	cout << endl;
+	cout << "First Matrix:  " << endl;
+	PrintTheMatrix(M1);
+	cout << endl;
+	cout << "Second Matrix:  " << endl;
+	PrintTheMatrix(M2);
+
+	//Сложение двуз матриц по элементно
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++) {
+			var1 = ResultMatrix[i][j];
+			var2 = ResultMatrix[i][j];
+			_asm
+			{
+				mov ax, var1
+				mov bx, var2
+				add ax, bx
+				mov var1, ax
+			}
+			ResultMatrix[i][j] = var1;
+		}
+	}
+	//Умножение матриц M1 и M2
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+			for (int r = 0; r < 8; r++)
+			{
+				var1 = M1[i][r];
+				var2 = M2[r][j];
+				temp = ResultMatrix[i][j];
+				_asm
+				{
+					mov ax, var1
+					mov bx, var2
+					mul bx
+					add temp, eax
+				}
+				ResultMatrix[i][j] = temp;
+			}
+		}
+	}
+	//Умножение матрицы на x
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+			var1 = ResultMatrix[i][j];
+			_asm
+			{
+				mov ax, x
+				mov bx, var1
+				mul bx
+				mov temp, eax
+			}
+			ResultMatrix[i][j] = temp;
+		}
+	}
+
+	cout << endl;
+	cout << "Result Matrix:  " << endl;
+	PrintTheMatrix(ResultMatrix);
+	rdtsc_zn = (rdtsc() - TimeValue) / (1000000 * 1000 * 2.3) * 10000; // высчитываем время через число тактов за время выполнения программы и мощность процессора
+	cout << "Time (in milliseconds) (without SSE) = " << rdtsc_zn << endl; // выводим время выполнения программы
 	return 0;
 }
